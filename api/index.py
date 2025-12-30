@@ -15,4 +15,5 @@ from app import app
 from mangum import Mangum
 
 # Wrap FastAPI app with Mangum for serverless deployment
-handler = Mangum(app, lifespan="off")
+# api_gateway_base_path="/api" strips the /api prefix from incoming requests
+handler = Mangum(app, lifespan="off", api_gateway_base_path="/api")

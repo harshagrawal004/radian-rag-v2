@@ -24,7 +24,7 @@ from app.models.schemas import (
 )
 from app.services.rag import RagService
 
-router = APIRouter(prefix="/api/patients", tags=["patients"])
+router = APIRouter(prefix="/patients", tags=["patients"])
 
 
 def get_rag_service(request: Request) -> RagService:
