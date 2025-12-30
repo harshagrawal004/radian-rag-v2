@@ -11,12 +11,9 @@ backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 # Import the FastAPI app
-from app.main import app
+from app.main import app as fastapi_app
 
-# Import Mangum to convert ASGI (FastAPI) to AWS Lambda/Vercel format
-from mangum import Mangum
-
-# Create the handler instance
-# Set lifespan to "off" for Vercel serverless - use middleware for initialization
-handler = Mangum(app, lifespan="off")
+# For Vercel, we need to export the ASGI app directly
+# Vercel will handle the ASGI protocol
+app = fastapi_app
 
