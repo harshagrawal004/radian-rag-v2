@@ -1,0 +1,33 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+backend/venv/
+
+# Testing
+.pytest_cache/
+*.egg-info/
+
+# Development files
+backend/scripts/
+backend/migrations/
+_old/
+
+# Documentation (optional - remove this line if you want docs deployed)
+*.md
+!README.md
+
+# Logs
+*.log
+
+# Editor files
+.vscode/
+.idea/
+.DS_Store
