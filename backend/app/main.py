@@ -104,7 +104,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
-app.include_router(patient_router, prefix=settings.api_prefix)
+app.include_router(patient_router, prefix="/api")
 
 
 @app.exception_handler(APIException)
