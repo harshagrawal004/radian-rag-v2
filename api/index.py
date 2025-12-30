@@ -10,10 +10,12 @@ from pathlib import Path
 backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-# Import the FastAPI app
+# Import required modules
+from mangum import Mangum
 from app.main import app as fastapi_app
 
-# For Vercel, we need to export the ASGI app directly
-# Vercel will handle the ASGI protocol
-app = fastapi_app
+# Create Mangum handler - Vercel requires this specific pattern
+def handler(event, context):
+    asgi_handler = Mangum(fastapi_app, lifespan="off")
+    return asgi_handler(event, context)
 
