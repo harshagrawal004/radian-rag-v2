@@ -104,7 +104,8 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
-app.include_router(patient_router, prefix="/api")
+# Don't add /api prefix here - Vercel's rewrite already handles it
+app.include_router(patient_router)
 
 
 @app.exception_handler(APIException)
