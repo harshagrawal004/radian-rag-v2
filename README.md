@@ -80,3 +80,4 @@ Activate virtual environment: cd "C:\Users\Aarushi Sharma\OneDrive - University 
 One terminal shell: cd \backend and then uvicorn app.main:app --reload --port 8000 (backend)
 Another terminal shell: npm run dev
 
+
