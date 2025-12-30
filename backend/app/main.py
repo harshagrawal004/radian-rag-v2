@@ -80,8 +80,8 @@ async def lifespan(app: FastAPI):
     # Note: In serverless, we don't close connections as they may be reused
 
 
-# Create app - lifespan will be disabled by Mangum in serverless
-app = FastAPI(title="TARA Backend", lifespan=None)
+# Create app - no lifespan for serverless
+app = FastAPI(title="TARA Backend")
 
 # Middleware to ensure state is initialized (for serverless)
 @app.middleware("http")
@@ -89,32 +89,19 @@ async def ensure_initialized(request: Request, call_next):
     """Ensure app state is initialized before handling requests."""
     if not _app_state["initialized"]:
         await initialize_app_state()
+        request.app.state.settings = _get_settings()
         request.app.state.chunk_repo = _app_state["chunk_repo"]
         request.app.state.log_repo = _app_state["log_repo"]
         request.app.state.rag_service = _app_state["rag_service"]
     return await call_next(request)
 
-# Configure CORS based on settings (lazy)
-def _get_cors_origins():
-    s = _get_settings()
-    if s.cors_allow_all_origins:
-        return ["*"]
-    else:
-        cors_origins = [str(origin) for origin in s.cors_origins]
-        # Add additional origins from environment variable
-        if s.cors_additional_origins:
-            additional = [origin.strip() for origin in s.cors_additional_origins.split(",")]
-            cors_origins.extend(additional)
-        return cors_origins
-
-cors_origins = _get_cors_origins()
-
+# Configure CORS - allow all origins for now to avoid import-time issues
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],  # Allow all origins for serverless
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Restrict methods
-    allow_headers=["Content-Type", "Authorization", "X-API-Key"],  # Restrict headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
 app.include_router(patient_router, prefix=settings.api_prefix)
