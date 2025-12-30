@@ -17,7 +17,14 @@ from app.repositories.patient_chunks import PatientChunkRepository
 from app.repositories.rag_log import RagLogRepository
 from app.services.rag import RagService
 
-settings = get_settings()
+# Lazy load settings to avoid import-time failures in serverless
+settings = None
+
+def _get_settings():
+    global settings
+    if settings is None:
+        settings = get_settings()
+    return settings
 
 # Global state for serverless (reused across invocations)
 _app_state = {
@@ -32,20 +39,23 @@ async def initialize_app_state():
     """Initialize app state (lazy initialization for serverless)."""
     if _app_state["initialized"]:
         return
-    
+
+    # Get settings lazily
+    s = _get_settings()
+
     _app_state["chunk_repo"] = await PatientChunkRepository.create(
-        settings.database_url,
-        min_size=settings.pg_pool_min_size,
-        max_size=settings.pg_pool_max_size,
+        s.database_url,
+        min_size=s.pg_pool_min_size,
+        max_size=s.pg_pool_max_size,
     )
     _app_state["log_repo"] = await RagLogRepository.create(
-        settings.database_url,
-        min_size=settings.pg_pool_min_size,
-        max_size=settings.pg_pool_max_size,
+        s.database_url,
+        min_size=s.pg_pool_min_size,
+        max_size=s.pg_pool_max_size,
     )
-    _app_state["rag_service"] = RagService(settings, _app_state["chunk_repo"], _app_state["log_repo"])
+    _app_state["rag_service"] = RagService(s, _app_state["chunk_repo"], _app_state["log_repo"])
     _app_state["initialized"] = True
-    
+
     import logging
     logger = logging.getLogger(__name__)
     logger.info("RAG logging initialized and ready")
@@ -56,18 +66,20 @@ async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown."""
     # Startup - only for non-serverless environments
     await initialize_app_state()
-    app.state.settings = settings
+    s = _get_settings()
+    app.state.settings = s
     app.state.chunk_repo = _app_state["chunk_repo"]
     app.state.log_repo = _app_state["log_repo"]
     app.state.rag_service = _app_state["rag_service"]
-    
+
     yield  # App runs here
-    
+
     # Shutdown - only for non-serverless environments
     # Note: In serverless, we don't close connections as they may be reused
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+# Create app without lifespan to avoid initialization issues in serverless
+app = FastAPI(title="TARA Backend", lifespan=lifespan)
 
 # Middleware to ensure state is initialized (for serverless)
 @app.middleware("http")
@@ -80,15 +92,20 @@ async def ensure_initialized(request: Request, call_next):
         request.app.state.rag_service = _app_state["rag_service"]
     return await call_next(request)
 
-# Configure CORS based on settings
-if settings.cors_allow_all_origins:
-    cors_origins = ["*"]
-else:
-    cors_origins = [str(origin) for origin in settings.cors_origins]
-    # Add additional origins from environment variable
-    if settings.cors_additional_origins:
-        additional = [origin.strip() for origin in settings.cors_additional_origins.split(",")]
-        cors_origins.extend(additional)
+# Configure CORS based on settings (lazy)
+def _get_cors_origins():
+    s = _get_settings()
+    if s.cors_allow_all_origins:
+        return ["*"]
+    else:
+        cors_origins = [str(origin) for origin in s.cors_origins]
+        # Add additional origins from environment variable
+        if s.cors_additional_origins:
+            additional = [origin.strip() for origin in s.cors_additional_origins.split(",")]
+            cors_origins.extend(additional)
+        return cors_origins
+
+cors_origins = _get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
@@ -114,7 +131,8 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     
     # Don't expose internal error details in production
-    if settings.environment == "prod":
+    s = _get_settings()
+    if s.environment == "prod":
         error_message = "An internal server error occurred. Please try again later."
     else:
         error_message = f"Internal server error: {str(exc)}"
@@ -148,7 +166,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
     # Only add HSTS in production
-    if settings.environment == "prod":
+    s = _get_settings()
+    if s.environment == "prod":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
     return response
