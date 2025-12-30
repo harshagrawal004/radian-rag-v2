@@ -65,6 +65,8 @@ async def initialize_app_state():
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown."""
     # Startup - only for non-serverless environments
+    # In serverless (Vercel), initialization happens via middleware
+    # This lifespan is only used when running locally
     await initialize_app_state()
     s = _get_settings()
     app.state.settings = s
@@ -78,8 +80,8 @@ async def lifespan(app: FastAPI):
     # Note: In serverless, we don't close connections as they may be reused
 
 
-# Create app without lifespan to avoid initialization issues in serverless
-app = FastAPI(title="TARA Backend", lifespan=lifespan)
+# Create app - lifespan will be disabled by Mangum in serverless
+app = FastAPI(title="TARA Backend", lifespan=None)
 
 # Middleware to ensure state is initialized (for serverless)
 @app.middleware("http")
