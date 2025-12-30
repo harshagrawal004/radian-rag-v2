@@ -12,6 +12,7 @@ sys.path.insert(0, str(root_dir))
 
 # Import the FastAPI app from the root-level app.py
 from app import app
+from mangum import Mangum
 
-# Vercel expects an "app" or "handler" export
-# The app itself is already a valid ASGI application
+# Wrap FastAPI app with Mangum for serverless deployment
+handler = Mangum(app, lifespan="off")
