@@ -16,6 +16,14 @@ from app.main import app as fastapi_app
 
 # Create Mangum handler - Vercel requires this specific pattern
 def handler(event, context):
+    # Debug logging
+    import json
+    print(f"[DEBUG] Event: {json.dumps(event, indent=2)}")
+    print(f"[DEBUG] Context: {context}")
+
     asgi_handler = Mangum(fastapi_app, lifespan="off")
-    return asgi_handler(event, context)
+    response = asgi_handler(event, context)
+
+    print(f"[DEBUG] Response: {response}")
+    return response
 

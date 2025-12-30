@@ -107,6 +107,14 @@ app.add_middleware(
 # Add /api prefix to match Vercel's file-based routing
 app.include_router(patient_router, prefix="/api")
 
+# Debug: Print all registered routes
+import logging
+logger = logging.getLogger(__name__)
+logger.info("Registered routes:")
+for route in app.routes:
+    if hasattr(route, 'path'):
+        logger.info(f"  {route.methods if hasattr(route, 'methods') else 'N/A'} {route.path}")
+
 
 @app.exception_handler(APIException)
 async def api_exception_handler(request: Request, exc: APIException):
