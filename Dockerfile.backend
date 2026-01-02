@@ -36,7 +36,10 @@ ENV PATH=/root/.local/bin:$PATH
 
 # Copy application code
 COPY app.py .
-COPY backend/ backend/
+COPY backend/ ./
+
+# Set Python path to find modules correctly
+ENV PYTHONPATH=/app
 
 # Expose port
 EXPOSE 8000
